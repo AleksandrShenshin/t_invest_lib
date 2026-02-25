@@ -77,5 +77,3 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                         # Все задачи с ticker завершены - завершаем опрос данного ticker
                         shared_tasks.pop(ticker, None)
                         break
-
-                await asyncio.sleep(3)
