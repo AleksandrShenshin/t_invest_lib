@@ -98,6 +98,7 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                                 # Все задачи с ticker завершены - завершаем опрос данного ticker
                                 should_unsubscribe = True
                                 shared_tasks.pop(ticker, None)
+                                await asyncio.sleep(2)
                                 break
                         else:
                             print(f"ERROR stream_ticker_one_minute({ticker}): {ticker} not found in shared_tasks = {shared_tasks}", flush=True)
