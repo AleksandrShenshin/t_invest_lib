@@ -39,7 +39,11 @@ async def get_param_instrument(ticker_instr):
 
 
 async def stream_ticker_one_minute(lock, shared_tasks, ticker):
+    should_unsubscribe = False
     async with lock:
+        if ticker not in shared_tasks:
+            print(f"ERROR stream_ticker_one_minute({ticker}): START: {ticker} not found in shared_tasks = {shared_tasks}", flush=True)
+            return
         figi = shared_tasks[ticker]['figi']
 
     async def request_iterator():
@@ -54,26 +58,48 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                 ],
             )
         )
+
         while True:
+            if should_unsubscribe:
+                # Отмена подписки
+                yield MarketDataRequest(
+                    subscribe_candles_request=SubscribeCandlesRequest(
+                        subscription_action=SubscriptionAction.SUBSCRIPTION_ACTION_UNSUBSCRIBE,
+                        instruments=[
+                            CandleInstrument(
+                                figi=figi,
+                                interval=SubscriptionInterval.SUBSCRIPTION_INTERVAL_ONE_MINUTE,
+                            )
+                        ],
+                    )
+                )
+                break
             await asyncio.sleep(1)
 
-    async with AsyncClient(config('T_TOKEN')) as client:
-        async for marketdata in client.market_data_stream.market_data_stream(
-                request_iterator()
-        ):
-            if marketdata.candle:
-                # Данные — свечи
-                async with lock:
-                    candle = marketdata.candle
-                    try:
-                        shared_tasks[ticker]['high'] = float(quotation_to_decimal(candle.high))
-                        shared_tasks[ticker]['low'] = float(quotation_to_decimal(candle.low))
-                        shared_tasks[ticker]['volume'] = int(candle.volume)
-                        shared_tasks[ticker]['time_received'] = candle.last_trade_ts
-                    except ValueError:
-                        pass
+    try:
+        async with AsyncClient(config('T_TOKEN')) as client:
+            async for marketdata in client.market_data_stream.market_data_stream(
+                    request_iterator()
+            ):
+                if marketdata.candle:
+                    # Данные — свечи
+                    async with lock:
+                        candle = marketdata.candle
+                        if ticker in shared_tasks:
+                            try:
+                                shared_tasks[ticker]['high'] = float(quotation_to_decimal(candle.high))
+                                shared_tasks[ticker]['low'] = float(quotation_to_decimal(candle.low))
+                                shared_tasks[ticker]['volume'] = int(candle.volume)
+                                shared_tasks[ticker]['time_received'] = candle.last_trade_ts
+                            except ValueError:
+                                print(f"ERROR stream_ticker_one_minute({ticker}): except ValueError: candle = {candle}", flush=True)
 
-                    if not shared_tasks[ticker]['depends']:
-                        # Все задачи с ticker завершены - завершаем опрос данного ticker
-                        shared_tasks.pop(ticker, None)
-                        break
+                            if not shared_tasks[ticker]['depends']:
+                                # Все задачи с ticker завершены - завершаем опрос данного ticker
+                                should_unsubscribe = True
+                                shared_tasks.pop(ticker, None)
+                                break
+                        else:
+                            print(f"ERROR stream_ticker_one_minute({ticker}): {ticker} not found in shared_tasks = {shared_tasks}", flush=True)
+    except Exception as e:
+        print(f"ERROR critical stream_ticker_one_minute({ticker}): {e}", flush=True)
