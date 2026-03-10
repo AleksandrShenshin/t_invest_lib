@@ -125,6 +125,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
             )
         )
 
+        elapsed = 0
         while True:
             if should_unsubscribe:
                 # Отмена подписки
@@ -141,7 +142,15 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                     )
                 )
                 break
+
             await asyncio.sleep(1)
+            elapsed += 1
+
+            # Heartbeat: не чаще 1 раза в 30–60 секунд
+            if elapsed >= 35:
+                # Пустой запрос, поддерживающий стрим "живым"
+                yield MarketDataRequest()
+                elapsed = 0
 
     try:
         async with AsyncClient(config('T_TOKEN')) as client:
@@ -153,7 +162,9 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                     async with lock_data_long5:
                         candle = marketdata.candle
                         if data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] != None:
-                            if data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] != (candle.last_trade_ts.minute // 5): # Проверка перехода между 5 мин
+                            # Проверка перехода между 5 мин
+                            if data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] != (candle.last_trade_ts.minute // 5) and \
+                               data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] < candle.last_trade_ts:
                                 # произошёл переход 5 мин
 
                                 # обновляем массив atr
