@@ -59,6 +59,7 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
             )
         )
 
+        elapsed = 0
         while True:
             if should_unsubscribe:
                 # Отмена подписки
@@ -74,7 +75,15 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                     )
                 )
                 break
+
             await asyncio.sleep(1)
+            elapsed += 1
+
+            # Heartbeat: не чаще 1 раза в 30–60 секунд
+            if elapsed >= 35:
+                # Пустой запрос, поддерживающий стрим "живым"
+                yield MarketDataRequest()
+                elapsed = 0
 
     try:
         async with AsyncClient(config('T_TOKEN')) as client:
