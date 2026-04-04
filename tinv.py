@@ -25,7 +25,10 @@ async def get_param_instrument(ticker_instr):
                     )
                     break
                 except RequestError as e:
-                    continue
+                    if e.details == '40003':
+                        return -1, ticker_param, f"ERROR: get_param_instrument(): get_instrument_by({ticker_instr}) - T_TOKEN {e.code}"
+                    else:
+                        continue
             else:
                 continue
             break
