@@ -1,6 +1,8 @@
 import asyncio
+import logging
 from decouple import config
-from t_tech.invest import Client, InstrumentIdType
+from datetime import datetime, timedelta, timezone
+from t_tech.invest import Client, InstrumentIdType, CandleInterval
 from t_tech.invest.exceptions import RequestError
 from t_tech.invest.utils import quotation_to_decimal
 from t_tech.invest import (
@@ -11,6 +13,9 @@ from t_tech.invest import (
     SubscriptionAction,
     SubscriptionInterval,
 )
+
+logger = logging.getLogger(__name__)
+
 
 async def get_param_instrument(ticker_instr):
     ticker_param = {'ticker': '', 'figi': '', 'precision': ''}
@@ -218,3 +223,45 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                             break
     except Exception as e:
         print(f"ERROR critical stream_list_figi_five_minute({market}): {e}", flush=True)
+
+
+async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, market):
+    async with lock_data_throws:
+        list_figi = list(data_tasks_throws[market]['tickers'])
+
+    try:
+        with Client(config('T_TOKEN')) as client:
+            while True:
+                # sleep until next 5sec
+                now = datetime.now(timezone.utc)
+                sec = now.second + now.microsecond / 1_000_000
+                # offset to next 0,5,10,...55
+                delta = 5 - (sec % 5)
+                await asyncio.sleep(delta)
+
+                async with lock_data_throws:
+                    now = datetime.now(timezone.utc)
+                    for figi in list_figi:
+                        candles = client.market_data.get_candles(
+                            instrument_id=figi,
+                            from_=now - timedelta(seconds=10),
+                            to=now,
+                            interval=CandleInterval.CANDLE_INTERVAL_5_SEC,
+                        ).candles
+                        if candles:
+                            data_tasks_throws[market]['tickers'][figi]['candle']['high'] = float(quotation_to_decimal(candles[-1].high))
+                            data_tasks_throws[market]['tickers'][figi]['candle']['low'] = float(quotation_to_decimal(candles[-1].low))
+                            data_tasks_throws[market]['tickers'][figi]['candle']['open'] = float(quotation_to_decimal(candles[-1].open))
+                            data_tasks_throws[market]['tickers'][figi]['candle']['close'] = float(quotation_to_decimal(candles[-1].close))
+                            data_tasks_throws[market]['tickers'][figi]['candle']['time_received'] = candles[-1].time
+                        else:
+                            # в данный интервал не было сделок
+                            pass
+
+                    if not data_tasks_throws[market]['depends']:
+                        # Задача по market завершена - завершаем опрос
+                        data_tasks_throws.pop(market, None)
+                        logger.info(f"FINISH stream_get_last_5sec_candle({market})")
+                        break
+    except Exception as e:
+        logger.error(f"ERROR critical: Finish stream_get_last_5sec_candle({market}): {e}")
