@@ -115,6 +115,7 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                                 # Все задачи с ticker завершены - завершаем опрос данного ticker
                                 should_unsubscribe = True
                                 shared_tasks.pop(ticker, None)
+                                # TODO: logger
                                 await asyncio.sleep(2)
                                 break
                         else:
@@ -219,6 +220,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                             # Задача по market завершена - завершаем опрос
                             should_unsubscribe = True
                             data_tasks_long5.pop(market, None)
+                            # TODO: logger
                             await asyncio.sleep(2)              # ожидание завершения should_unsubscribe
                             break
     except Exception as e:
@@ -261,7 +263,7 @@ async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, marke
                     if not data_tasks_throws[market]['depends']:
                         # Задача по market завершена - завершаем опрос
                         data_tasks_throws.pop(market, None)
-                        logger.info(f"FINISH stream_get_last_5sec_candle({market})")
+                        logger.warning(f"FINISH stream_get_last_5sec_candle({market})")
                         break
     except Exception as e:
         logger.error(f"ERROR critical: Finish stream_get_last_5sec_candle({market}): {e}")
