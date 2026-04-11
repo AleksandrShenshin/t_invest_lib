@@ -201,7 +201,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low'] = float(quotation_to_decimal(candle.low))
                                     data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] = (candle.last_trade_ts.minute // 5)
                                 except ValueError:
-                                    print(f"ERROR stream_list_figi_five_minute({market}): except ValueError: candle = {candle}", flush=True)
+                                    logger.error(f"ERROR stream_list_figi_five_minute({market}): except ValueError: candle = {candle}")
                             else:
                                 if float(quotation_to_decimal(candle.high)) > data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high']:
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] = float(quotation_to_decimal(candle.high))
@@ -216,17 +216,19 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                                 data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] = candle.last_trade_ts
                                 data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] = (candle.last_trade_ts.minute // 5)
                             except ValueError:
-                                print(f"ERROR stream_list_figi_five_minute({market}): except ValueError: candle = {candle}", flush=True)
+                                logger.error(f"ERROR stream_list_figi_five_minute({market}): except ValueError: candle = {candle}")
 
                         if not data_tasks_long5[market]['depends']:
                             # Задача по market завершена - завершаем опрос
                             should_unsubscribe = True
                             data_tasks_long5.pop(market, None)
-                            # TODO: logger
+                            logger.warning(f"stream_list_figi_five_minute({market}): no task - FINISH")
                             await asyncio.sleep(2)              # ожидание завершения should_unsubscribe
                             break
     except Exception as e:
-        print(f"ERROR critical stream_list_figi_five_minute({market}): {e}", flush=True)
+        logger.error(f"ERROR critical stream_list_figi_five_minute({market}): {e}")
+    finally:
+        logger.warning(f"Finished stream_list_figi_five_minute({market})")
 
 
 async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, market):
