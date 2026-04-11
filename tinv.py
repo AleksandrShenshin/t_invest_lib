@@ -271,3 +271,5 @@ async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, marke
                         break
     except Exception as e:
         logger.error(f"ERROR critical: Finish stream_get_last_5sec_candle({market}): {e}")
+    finally:
+        logger.warning(f"Finished stream_get_last_5sec_candle({market})")
