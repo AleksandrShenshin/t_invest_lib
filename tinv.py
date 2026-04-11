@@ -50,7 +50,7 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
     should_unsubscribe = False
     async with lock:
         if ticker not in shared_tasks:
-            print(f"ERROR stream_ticker_one_minute({ticker}): START: {ticker} not found in shared_tasks = {shared_tasks}", flush=True)
+            logger.error(f"ERROR stream_ticker_one_minute({ticker}): START: {ticker} not found in shared_tasks = {shared_tasks}")
             return
         figi = shared_tasks[ticker]['figi']
 
@@ -109,19 +109,21 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
                                 shared_tasks[ticker]['volume'] = int(candle.volume)
                                 shared_tasks[ticker]['time_received'] = candle.last_trade_ts
                             except ValueError:
-                                print(f"ERROR stream_ticker_one_minute({ticker}): except ValueError: candle = {candle}", flush=True)
+                                logger.error(f"ERROR stream_ticker_one_minute({ticker}): except ValueError: candle = {candle}")
 
                             if not shared_tasks[ticker]['depends']:
                                 # Все задачи с ticker завершены - завершаем опрос данного ticker
                                 should_unsubscribe = True
                                 shared_tasks.pop(ticker, None)
-                                # TODO: logger
+                                logger.warning(f"stream_ticker_one_minute(): no task for {ticker} - FINISH")
                                 await asyncio.sleep(2)
                                 break
                         else:
-                            print(f"ERROR stream_ticker_one_minute({ticker}): {ticker} not found in shared_tasks = {shared_tasks}", flush=True)
+                            logger.error(f"ERROR stream_ticker_one_minute({ticker}): {ticker} not found in shared_tasks = {shared_tasks}")
     except Exception as e:
-        print(f"ERROR critical stream_ticker_one_minute({ticker}): {e}", flush=True)
+        logger.error(f"ERROR critical stream_ticker_one_minute({ticker}): {e}")
+    finally:
+        logger.warning(f"Finished stream_ticker_one_minute({ticker})")
 
 
 async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market):
