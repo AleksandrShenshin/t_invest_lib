@@ -53,6 +53,7 @@ async def stream_ticker_one_minute(lock, shared_tasks, ticker):
             logger.error(f"ERROR stream_ticker_one_minute({ticker}): START: {ticker} not found in shared_tasks = {shared_tasks}")
             return
         figi = shared_tasks[ticker]['figi']
+    logger.warning(f"START stream_ticker_one_minute({ticker})")
 
     async def request_iterator():
         yield MarketDataRequest(
@@ -130,6 +131,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
     should_unsubscribe = False
     async with lock_data_long5:
         list_figi = list(data_tasks_long5[market]['tickers'])
+    logger.warning(f"START stream_list_figi_five_minute({market}) -- {list_figi}")
 
     async def request_iterator():
         yield MarketDataRequest(
@@ -234,6 +236,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
 async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, market):
     async with lock_data_throws:
         list_figi = list(data_tasks_throws[market]['tickers'])
+    logger.warning(f"START stream_get_last_5sec_candle({market}) -- {list_figi}")
 
     try:
         with Client(config('T_TOKEN')) as client:
