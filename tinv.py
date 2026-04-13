@@ -192,7 +192,7 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] -
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low']
                                 )
-                                if len(data_tasks_long5[market]['tickers'][candle.figi]['atr']) > 5:
+                                if len(data_tasks_long5[market]['tickers'][candle.figi]['atr']) > 120:
                                     del data_tasks_long5[market]['tickers'][candle.figi]['atr'][0]
 
                                 # инициализируем cur_atr для новой 5 мин
