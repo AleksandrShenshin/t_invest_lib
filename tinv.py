@@ -17,11 +17,19 @@ from t_tech.invest import (
 logger = logging.getLogger(__name__)
 
 
-async def get_param_instrument(ticker_instr):
+async def get_param_instrument(ticker_instr, market=None):
     ticker_param = {'ticker': '', 'figi': '', 'precision': ''}
+
+    if market == 'forts':
+        list_class_codes = ["SPBFUT"]
+    elif market == 'moex':
+        list_class_codes = ["TQBR"]
+    else:
+        list_class_codes = ["SPBFUT", "TQBR"]
+
     with Client(config('T_TOKEN')) as client:
         for ticker in [ticker_instr, ticker_instr.upper()]:
-            for class_code in ["SPBFUT", "TQBR"]:
+            for class_code in list_class_codes:
                 try:
                     instrument_response = client.instruments.get_instrument_by(
                         id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_TICKER,
