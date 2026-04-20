@@ -28,6 +28,14 @@ async def get_param_instrument(ticker_instr, market=None):
         list_class_codes = ["SPBFUT", "TQBR"]
 
     with Client(config('T_TOKEN')) as client:
+        # Определяем к какой площадке относится тикер, название тикера корректируем с учетом регистра
+        response = client.instruments.find_instrument(query=ticker_instr)
+        for instr in response.instruments:
+            if ticker_instr.lower() == instr.ticker.lower() and instr.class_code in list_class_codes:
+               list_class_codes = [instr.class_code]
+               ticker_instr = instr.ticker
+               break
+
         for ticker in [ticker_instr, ticker_instr.upper()]:
             for class_code in list_class_codes:
                 try:
