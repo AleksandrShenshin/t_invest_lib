@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def get_param_instrument(ticker_instr, market=None):
-    ticker_param = {'ticker': '', 'figi': '', 'precision': ''}
+    ticker_param = {'ticker': '', 'name': '', 'figi': '', 'precision': ''}
 
     if market == 'forts':
         list_class_codes = ["SPBFUT"]
@@ -57,6 +57,7 @@ async def get_param_instrument(ticker_instr, market=None):
             return -1, ticker_param, f"ERROR: get_param_instrument(): get_instrument_by({ticker_instr})"
 
         ticker_param['ticker'] = instrument_response.instrument.ticker
+        ticker_param['name'] = instrument_response.instrument.name.split()[0]
         ticker_param['figi'] = instrument_response.instrument.figi
         ticker_param['precision'] = quotation_to_decimal(instrument_response.instrument.min_price_increment)
         return 0, ticker_param, None
