@@ -206,32 +206,43 @@ async def stream_list_figi_five_minute(lock_data_long5, data_tasks_long5, market
                                data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] < candle.last_trade_ts:
                                 # произошёл переход 5 мин
 
-                                # обновляем массив atr
+                                # обновляем массив atr и atr_volume
                                 data_tasks_long5[market]['tickers'][candle.figi]['atr'].append(
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] -
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low']
                                 )
+                                data_tasks_long5[market]['tickers'][candle.figi]['atr_volume'].append(
+                                    data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['volume']
+                                )
                                 if len(data_tasks_long5[market]['tickers'][candle.figi]['atr']) > 120:
                                     del data_tasks_long5[market]['tickers'][candle.figi]['atr'][0]
+                                    del data_tasks_long5[market]['tickers'][candle.figi]['atr_volume'][0]
 
                                 # инициализируем cur_atr для новой 5 мин
                                 try:
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] = float(quotation_to_decimal(candle.high))
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low'] = float(quotation_to_decimal(candle.low))
+                                    data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['volume'] = int(candle.volume)
+                                    data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] = candle.last_trade_ts
                                     data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] = (candle.last_trade_ts.minute // 5)
                                 except ValueError:
                                     logger.error(f"ERROR stream_list_figi_five_minute({market}): except ValueError: candle = {candle}")
                             else:
+                                # Обновляем параметры свечи с учетом защиты от запаздывающих сообщений
                                 if float(quotation_to_decimal(candle.high)) > data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high']:
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] = float(quotation_to_decimal(candle.high))
                                 if float(quotation_to_decimal(candle.low)) < data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low']:
                                     data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low'] = float(quotation_to_decimal(candle.low))
-                            data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] = candle.last_trade_ts
+                                if int(candle.volume) > data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['volume']:
+                                    data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['volume'] = int(candle.volume)
+                                if candle.last_trade_ts > data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received']:
+                                    data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] = candle.last_trade_ts
                         else:
                             try:
                                 # first initialization
                                 data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['high'] = float(quotation_to_decimal(candle.high))
                                 data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['low'] = float(quotation_to_decimal(candle.low))
+                                data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['volume'] = int(candle.volume)
                                 data_tasks_long5[market]['tickers'][candle.figi]['cur_atr']['time_received'] = candle.last_trade_ts
                                 data_tasks_long5[market]['tickers'][candle.figi]['prev_bin'] = (candle.last_trade_ts.minute // 5)
                             except ValueError:
