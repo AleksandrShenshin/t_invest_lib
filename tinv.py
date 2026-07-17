@@ -1,3 +1,5 @@
+import os
+import sys
 import asyncio
 import logging
 from decouple import config
@@ -15,6 +17,22 @@ from t_tech.invest import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Указываем путь к сертификатам Минцифры для gRPC
+# (Используется прямые gRPC-вызовы к T-Invest API при установке соединения.
+# В отличие от requests, который мы настроили через certifi, gRPC (через который работает SDK)
+# имеет свой собственный механизм проверки сертификатов.)
+if sys.platform == "win32":
+    try:
+        import certifi
+
+        os.environ['GRPC_DEFAULT_SSL_ROOTS_FILE_PATH'] = certifi.where()
+    except ImportError:
+        logger.error("ERROR - Windows: certifi не установлен. Установите: pip install certifi")
+        # Если certifi нет, пробуем использовать системное хранилище
+        os.environ['GRPC_DEFAULT_SSL_ROOTS_FILE_PATH'] = ''
+elif sys.platform == "linux":
+    os.environ['GRPC_DEFAULT_SSL_ROOTS_FILE_PATH'] = '/usr/lib/ssl/certs/ca-certificates.crt'
 
 
 async def get_param_instrument(ticker_instr, market=None):
