@@ -81,6 +81,21 @@ async def get_param_instrument(ticker_instr, market=None):
         return 0, ticker_param, None
 
 
+async def get_list_definite_futures(prefix_ftrs):
+    with Client(config('T_TOKEN')) as client:
+        # INSTRUMENT_STATUS_BASE — возвращает только торгуемые инструменты
+        instruments_futures = client.instruments.futures(
+            instrument_status=1  # 1 = INSTRUMENT_STATUS_BASE
+        )
+
+        list_ftrs = []
+        list_all_futures = instruments_futures.instruments
+        for future in list_all_futures:
+            if future.ticker.lower().startswith(prefix_ftrs.lower()):
+                list_ftrs.append(future.ticker)
+        return list_ftrs
+
+
 async def stream_ticker_one_minute(lock, shared_tasks, ticker):
     should_unsubscribe = False
     async with lock:
