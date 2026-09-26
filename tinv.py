@@ -82,18 +82,28 @@ async def get_param_instrument(ticker_instr, market=None):
 
 
 async def get_list_definite_futures(prefix_ftrs):
-    with Client(config('T_TOKEN')) as client:
-        # INSTRUMENT_STATUS_BASE — возвращает только торгуемые инструменты
-        instruments_futures = client.instruments.futures(
-            instrument_status=1  # 1 = INSTRUMENT_STATUS_BASE
-        )
+    try:
+        with Client(config('T_TOKEN')) as client:
+            # INSTRUMENT_STATUS_BASE — возвращает только торгуемые инструменты
+            instruments_futures = client.instruments.futures(
+                instrument_status=1  # 1 = INSTRUMENT_STATUS_BASE
+            )
 
-        list_ftrs = []
-        list_all_futures = instruments_futures.instruments
-        for future in list_all_futures:
-            if future.ticker.lower().startswith(prefix_ftrs.lower()):
-                list_ftrs.append(future.ticker)
-        return list_ftrs
+            list_futures = {}
+            for future in instruments_futures.instruments:
+                if future.ticker.lower().startswith(prefix_ftrs.lower()):
+                    list_futures[future.ticker] = {
+                        'ticker': future.ticker,
+                        'minstep': quotation_to_decimal(future.min_price_increment),
+                        'lasttradedate': future.last_trade_date
+                    }
+            return 0, list_futures, ''
+    except RequestError as e:
+        if e.details == '40003':
+            return -1, {}, f"ERROR: get_list_definite_futures({prefix_ftrs}): неверный T_TOKEN ({e.code})"
+        return -1, {}, f"ERROR: get_list_definite_futures({prefix_ftrs}): {e.details}"
+    except Exception as e:
+        return -1, {}, f"ERROR: get_list_definite_futures({prefix_ftrs}): {type(e).__name__}: {e}"
 
 
 async def stream_ticker_one_minute(lock, shared_tasks, ticker):
