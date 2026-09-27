@@ -347,3 +347,47 @@ async def stream_get_last_5sec_candle(lock_data_throws, data_tasks_throws, marke
         logger.error(f"ERROR critical: Finish stream_get_last_5sec_candle({market}): {e}")
     finally:
         logger.warning(f"Finished stream_get_last_5sec_candle({market})")
+
+
+async def _get_candles_from_session_start(figi: str, interval: CandleInterval):
+    """Асинхронная версия получения свечей с начала торговой сессии.
+
+    Args:
+        figi: FIGI инструмента.
+        interval: Интервал свечей (обязательный параметр).
+
+    Returns:
+        tuple: (status, candles, err_msg)
+            status: 0 - успех, -1 - ошибка
+            candles: список свечей
+            err_msg: сообщение об ошибке или ''
+    """
+    try:
+        # Начало торговой сессии в 7:00 МСК = 04:00 UTC
+        now = datetime.now(timezone.utc)
+        session_start = now.replace(hour=4, minute=0, second=0, microsecond=0)
+        if now < session_start:
+            session_start -= timedelta(days=1)
+
+        async with AsyncClient(config('T_TOKEN')) as client:
+            response = await client.market_data.get_candles(
+                instrument_id=figi,
+                from_=session_start,
+                to=now,
+                interval=interval,
+            )
+            return 0, response.candles, ''
+    except RequestError as e:
+        if e.details == '40003':
+            return -1, [], f"ERROR: get_candles_from_session_start({figi}): неверный T_TOKEN ({e.code})"
+        return -1, [], f"ERROR: get_candles_from_session_start({figi}): {e.details}"
+    except Exception as e:
+        return -1, [], f"ERROR: get_candles_from_session_start({figi}): {type(e).__name__}: {e}"
+
+
+async def get_5min_candles_from_session_start(figi: str):
+    status, candles, err_msg = await _get_candles_from_session_start(
+        figi=figi,
+        interval=CandleInterval.CANDLE_INTERVAL_5_MIN
+    )
+    return status, candles, err_msg
