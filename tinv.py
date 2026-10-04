@@ -81,6 +81,25 @@ async def get_param_instrument(ticker_instr, market=None):
         return 0, ticker_param, None
 
 
+async def get_all_futures():
+    try:
+        with Client(config('T_TOKEN')) as client:
+            # INSTRUMENT_STATUS_BASE — возвращает только торгуемые инструменты
+            instruments_futures = client.instruments.futures(
+                instrument_status=1  # 1 = INSTRUMENT_STATUS_BASE
+            )
+            # ИЗМЕНЕНО: проверка на пустой ответ (признак RESOURCE_EXHAUSTED)
+            if not instruments_futures.instruments:
+                return -1, [], "ERROR: get_all_futures(): empty response (possible RESOURCE_EXHAUSTED)"
+            return 0, instruments_futures.instruments, ''
+    except RequestError as e:
+        if e.details == '40003':
+            return -1, [], f"ERROR: get_all_futures(): неверный T_TOKEN ({e.code})"
+        return -1, [], f"ERROR: get_all_futures(): {e.details}"
+    except Exception as e:
+        return -1, [], f"ERROR: get_all_futures(): {type(e).__name__}: {e}"
+
+
 async def get_list_definite_futures(prefix_ftrs):
     try:
         with Client(config('T_TOKEN')) as client:
