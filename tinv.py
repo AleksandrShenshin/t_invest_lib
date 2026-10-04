@@ -35,6 +35,10 @@ elif sys.platform == "linux":
     os.environ['GRPC_DEFAULT_SSL_ROOTS_FILE_PATH'] = '/usr/lib/ssl/certs/ca-certificates.crt'
 
 
+async def val_to_decimal(val):
+    return quotation_to_decimal(val)
+
+
 async def get_param_instrument(ticker_instr, market=None):
     ticker_param = {'ticker': '', 'name': '', 'figi': '', 'precision': ''}
 
